@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Camera</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #1976D2; }
+        .input-group { margin-bottom: 15px; }
+        input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #1976D2; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #115293; }
+        .btn-green { background-color: #4CAF50; }
+        .btn-green:hover { background-color: #388E3C; }
+        .camera-list { margin-top: 20px; }
+        .camera-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 10px; border: 1px solid #eee; }
+        .camera-info { display: flex; flex-direction: column; }
+        .camera-name { font-weight: bold; font-size: 16px; }
+        .camera-ip { color: #666; font-size: 14px; }
+        .actions button { width: auto; padding: 8px 12px; font-size: 14px; margin-left: 5px; }
+        .btn-delete { background-color: #F44336; }
+        .btn-delete:hover { background-color: #D32F2F; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Quản Lý Camera</h2>
+    
+    <div class="input-group">
+        <label>Tên Camera:</label>
+        <input type="text" id="camName" placeholder="VD: Camera Cổng">
+    </div>
+    <div class="input-group">
+        <label>Địa chỉ IP:</label>
+        <input type="text" id="camIp" placeholder="VD: 192.168.1.100">
+    </div>
+    <div class="input-group">
+        <label>Tài khoản:</label>
+        <input type="text" id="camUser" placeholder="admin">
+    </div>
+    <div class="input-group">
+        <label>Mật khẩu:</label>
+        <input type="password" id="camPass" placeholder="******">
+    </div>
+
+    <button onclick="addCamera()">+ Thêm Camera</button>
+    <button class="btn-green" onclick="viewAllCameras()">Xem Tất Cả Camera</button>
+
+    <div class="camera-list" id="cameraList">
+        <!-- Danh sách camera sẽ hiện ở đây -->
+    </div>
+</div>
+
+<script>
+    // Lấy danh sách camera từ bộ nhớ trình duyệt (Local Storage)
+    let cameras = JSON.parse(localStorage.getItem('cameraList')) || [];
+
+    // Hàm hiển thị danh sách camera
+    function renderCameras() {
+        const list = document.getElementById('cameraList');
+        list.innerHTML = '';
+        cameras.forEach((cam, index) => {
+            const div = document.createElement('div');
+            div.className = 'camera-item';
+            div.innerHTML = `
+                <div class="camera-info">
+                    <span class="camera-name">${cam.name || 'Camera ' + (index + 1)}</span>
+                    <span class="camera-ip">${cam.ip}</span>
+                </div>
+                <div class="actions">
+                    <button onclick="viewCamera(${index})">Xem</button>
+                    <button class="btn-delete" onclick="deleteCamera(${index})">Xóa</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    // Hàm thêm camera
+    function addCamera() {
+        const name = document.getElementById('camName').value;
+        const ip = document.getElementById('camIp').value;
+        const user = document.getElementById('camUser').value;
+        const pass = document.getElementById('camPass').value;
+
+        if (!ip) { alert('Vui lòng nhập IP!'); return; }
+
+        cameras.push({ name, ip, user, pass });
+        localStorage.setItem('cameraList', JSON.stringify(cameras));
+        renderCameras();
+        
+        // Xóa trắng form
+        document.getElementById('camName').value = '';
+        document.getElementById('camIp').value = '';
+        document.getElementById('camUser').value = '';
+        document.getElementById('camPass').value = '';
+    }
+
+    // Hàm xóa camera
+    function deleteCamera(index) {
+        cameras.splice(index, 1);
+        localStorage.setItem('cameraList', JSON.stringify(cameras));
+        renderCameras();
+    }
+
+    // Hàm xem camera (Gọi sang Android để phát video)
+    function viewCamera(index) {
+        const cam = cameras[index];
+        // Kiểm tra xem có app Android không, nếu có thì gọi hàm phát video
+        if (window.AndroidPlayer) {
+            const rtspUrl = `rtsp://${cam.user}:${cam.pass}@${cam.ip}:554/stream1`;
+            window.AndroidPlayer.playStream(rtspUrl);
+        } else {
+            alert('Đang chạy trên Web, không thể phát video RTSP. Hãy mở bằng App Android!');
+        }
+    }
+
+    function viewAllCameras() {
+        if (cameras.length === 0) { alert('Chưa có camera nào!'); return; }
+        if (window.AndroidPlayer) {
+            // Gửi toàn bộ danh sách sang Android để chia lưới
+            window.AndroidPlayer.playAll(JSON.stringify(cameras));
+        } else {
+            alert('Đang chạy trên Web, không thể phát video RTSP.');
+        }
+    }
+
+    // Hiển thị danh sách khi tải trang
+    renderCameras();
+</script>
+</body>
+</html>
